@@ -8,6 +8,7 @@ export default function Talleres() {
   const [editingNombre, setEditingNombre] = useState('');
 
   const baseUrl = import.meta.env.VITE_API_URL;
+  console.log('API base URL:', baseUrl);
 
   useEffect(() => {
     fetchTalleres();
