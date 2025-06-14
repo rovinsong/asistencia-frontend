@@ -21,7 +21,7 @@ export default function Navbar() {
         <button
           onClick={() => setMenuOpen(!menuOpen)}
           type="button"
-          className="inline-flex items-center p-2 ml-3 text-sm text-gray-200 rounded-lg md:hidden hover:bg-gray-700 focus:outline-none"
+          className="inline-flex items-center p-3 ml-3 text-white bg-gray-700 rounded-md md:hidden hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-white"
           aria-controls="navbar"
           aria-expanded={menuOpen}
         >
@@ -29,14 +29,16 @@ export default function Navbar() {
           <svg
             className="w-6 h-6"
             aria-hidden="true"
-            fill="currentColor"
-            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
             xmlns="http://www.w3.org/2000/svg"
           >
             <path
-              fillRule="evenodd"
-              d="M3 5h14M3 10h14M3 15h14"
-              clipRule="evenodd"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 6h16M4 12h16M4 18h16"
             />
           </svg>
         </button>
