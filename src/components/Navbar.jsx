@@ -62,6 +62,9 @@ export default function Navbar() {
             <li>
               <Link to="/historial" className={linkClass("/historial")}>Historial</Link>
             </li>
+            <li>
+              <Link to="/importar-alumnos" className={linkClass("/importar-alumnos")}>Importar CSV</Link>
+            </li>       
           </ul>
         </div>
       </div>

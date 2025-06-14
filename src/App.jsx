@@ -17,6 +17,7 @@ export default function App() {
           <Route path="/talleres" element={<Talleres />} />
           <Route path="/asistencia" element={<Asistencia />} />
           <Route path="/historial" element={<Historial />} />
+          <Route path="/importar-alumnos" element={<ImportarAlumnos />} />
         </Routes>
       </div>
     </Router>
