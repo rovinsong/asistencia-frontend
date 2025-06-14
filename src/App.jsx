@@ -5,6 +5,7 @@ import Alumnos from "./pages/Alumnos"
 import Talleres from "./pages/Talleres"
 import Asistencia from "./pages/Asistencia"
 import Historial from "./pages/Historial"
+import ImportarAlumnos from "./pages/ImportarAlumnos";
 
 export default function App() {
   return (
