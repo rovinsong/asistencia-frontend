@@ -1,12 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
-import Papa from "papaparse"; // asegúrate de instalar papaparse: npm install papaparse
+import Papa from "papaparse"; // npm install papaparse
 
 export default function ImportarAlumnos() {
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const [talleres, setTalleres] = useState([]);
+  const [selectedTaller, setSelectedTaller] = useState("");
   const baseUrl = import.meta.env.VITE_API_URL;
+
+  useEffect(() => {
+    // Cargar talleres para el selector
+    axios.get(`${baseUrl}/talleres`).then((res) => setTalleres(res.data));
+  }, []);
 
   // Maneja selección de archivo
   const handleFileChange = (e) => {
@@ -20,25 +27,39 @@ export default function ImportarAlumnos() {
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
-      complete: (results) => {
-        setPreview(results.data);
-      },
-      error: (err) => {
-        console.error("Error parseando CSV:", err);
-      }
+      complete: (results) => setPreview(results.data),
+      error: (err) => console.error("Error parseando CSV:", err)
     });
   };
 
   // Enviar datos al backend
   const handleUpload = async () => {
-    if (!preview.length) return;
+    if (!preview.length || !selectedTaller) return;
     setUploading(true);
     try {
-      // Asumimos que el backend acepta POST /alumnos/bulk con array de alumnos [{ nombre, apellidos, direccion, telefono, tallerId }]
-      await axios.post(`${baseUrl}/alumnos/bulk`, { alumnos: preview });
+      const alumnosToImport = preview.map((item) => {
+        // Dividir nombreCompleto si existe
+        let nombre = item.nombre;
+        let apellidos = item.apellidos;
+        if (item.nombreCompleto) {
+          const parts = item.nombreCompleto.trim().split(' ');
+          nombre = parts.shift();
+          apellidos = parts.join(' ');
+        }
+        return {
+          nombre,
+          apellidos,
+          direccion: item.direccion || '',
+          telefono: item.telefono || '',
+          tallerId: Number(selectedTaller)
+        };
+      });
+
+      await axios.post(`${baseUrl}/alumnos/bulk`, { alumnos: alumnosToImport });
       alert("Alumnos importados correctamente");
       setFile(null);
       setPreview([]);
+      setSelectedTaller("");
     } catch (error) {
       console.error(error);
       alert("Error al importar alumnos");
@@ -52,6 +73,17 @@ export default function ImportarAlumnos() {
       <h1 className="text-xl font-bold mb-4">Importar Alumnos desde CSV</h1>
 
       <div className="space-y-2 bg-gray-800 p-4 rounded">
+        <select
+          value={selectedTaller}
+          onChange={(e) => setSelectedTaller(e.target.value)}
+          className="w-full p-2 rounded bg-gray-700 text-white"
+        >
+          <option value="">Seleccionar Taller</option>
+          {talleres.map((t) => (
+            <option key={t.id} value={t.id}>{t.nombre}</option>
+          ))}
+        </select>
+
         <input
           type="file"
           accept=".csv"
@@ -92,7 +124,7 @@ export default function ImportarAlumnos() {
           </div>
           <button
             onClick={handleUpload}
-            disabled={uploading}
+            disabled={uploading || !selectedTaller}
             className="mt-4 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded"
           >
             {uploading ? "Importando..." : "Importar Alumnos"}
