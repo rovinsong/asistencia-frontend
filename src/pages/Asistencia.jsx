@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import spinner from "../assets/spinner.gif"; // Coloca un GIF en public/assets o src/assets
 
 export default function Asistencia() {
   const [talleres, setTalleres] = useState([]);
@@ -30,7 +29,11 @@ export default function Asistencia() {
     try {
       await axios.post(
         `${baseUrl}/asistencias`,
-        { taller_id: selectedTaller, fecha, asistencias: alumnos.map(a => ({ alumno_id: a.alumno_id, presente: a.presente })) }
+        {
+          taller_id: selectedTaller,
+          fecha,
+          asistencias: alumnos.map(a => ({ alumno_id: a.alumno_id, presente: a.presente }))
+        }
       );
       setMessage({ type: 'success', text: 'Asistencia guardada correctamente' });
     } catch (error) {
@@ -88,10 +91,13 @@ export default function Asistencia() {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded"
+                className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded flex items-center justify-center"
               >
                 {saving ? (
-                  <><img src={spinner} alt="Cargando..." className="inline h-6 w-6" /> Guardando...</>
+                  <>
+                    <img src="/spinner.gif" alt="Cargando..." className="inline h-6 w-6 mr-2" />
+                    Guardando...
+                  </>
                 ) : (
                   'Guardar Asistencia'
                 )}
