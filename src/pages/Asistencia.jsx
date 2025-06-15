@@ -5,17 +5,27 @@ import axios from "axios";
 export default function Asistencia() {
   const [talleres, setTalleres] = useState([]);
   const [selectedTaller, setSelectedTaller] = useState("");
-  const [fecha, setFecha] = useState("");
+  const getToday = () => new Date().toISOString().split('T')[0];
+  const [fecha, setFecha] = useState(getToday());
   const [alumnos, setAlumnos] = useState([]);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
   const baseUrl = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
+    // Cargar talleres al iniciar
     axios.get(`${baseUrl}/talleres`)
       .then(res => setTalleres(res.data))
       .catch(err => console.error(err));
   }, []);
+
+  useEffect(() => {
+    // Al cambiar el taller seleccionado, cargar lista automáticamente
+    if (selectedTaller) {
+      fetchAlumnos();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTaller]);
 
   const fetchAlumnos = () => {
     if (!selectedTaller || !fecha) return;
@@ -40,7 +50,6 @@ export default function Asistencia() {
       asistencias: alumnos.map(a => ({ alumno_id: a.alumno_id, presente: a.presente }))
     };
     try {
-      // Espera la petición y el delay mínimo de 2s
       await Promise.all([
         axios.post(`${baseUrl}/asistencias`, payload),
         delay
@@ -62,7 +71,7 @@ export default function Asistencia() {
   };
 
   return (
-    <div className="p-4 text-white">
+    <div className="relative p-4 text-white min-h-screen">
       <h1 className="text-xl font-bold mb-4">Registro de Asistencia</h1>
 
       {/* Controles principales */}
@@ -135,6 +144,13 @@ export default function Asistencia() {
             </div>
           )}
         </>
+      )}
+
+      {/* Overlay spinner con fondo difuminado */}
+      {saving && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50">
+          <img src="/spinner.gif" alt="Cargando..." className="h-16 w-16" />
+        </div>
       )}
     </div>
   );
