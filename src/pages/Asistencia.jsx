@@ -20,25 +20,21 @@ export default function Asistencia() {
   }, []);
 
   useEffect(() => {
-    // Al cambiar el taller seleccionado, cargar lista automáticamente
-    if (selectedTaller) {
-      fetchAlumnos();
+    // Al cambiar taller o fecha, recargar lista
+    if (selectedTaller && fecha) {
+      setMessage(null);
+      axios.get(
+        `${baseUrl}/asistencias?taller_id=${selectedTaller}&fecha=${fecha}`
+      )
+      .then(res => setAlumnos(res.data))
+      .catch(err => {
+        console.error(err.response?.data || err);
+        setMessage({ type: 'error', text: 'Error al cargar la lista' });
+      });
+    } else {
+      setAlumnos([]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTaller]);
-
-  const fetchAlumnos = () => {
-    if (!selectedTaller || !fecha) return;
-    setMessage(null);
-    axios.get(
-      `${baseUrl}/asistencias?taller_id=${selectedTaller}&fecha=${fecha}`
-    )
-    .then(res => setAlumnos(res.data))
-    .catch(err => {
-      console.error(err.response?.data || err);
-      setMessage({ type: 'error', text: 'Error al cargar la lista' });
-    });
-  };
+  }, [selectedTaller, fecha]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -74,7 +70,7 @@ export default function Asistencia() {
     <div className="relative p-4 text-white min-h-screen">
       <h1 className="text-xl font-bold mb-4">Registro de Asistencia</h1>
 
-      {/* Controles principales */}
+      {/* Controles principales (sin botón manual) */}
       <div className="flex flex-wrap items-center space-x-2 mb-4">
         <select
           value={selectedTaller}
@@ -93,13 +89,6 @@ export default function Asistencia() {
           onChange={e => setFecha(e.target.value)}
           className="bg-gray-700 text-white p-2 rounded w-40"
         />
-
-        <button
-          onClick={fetchAlumnos}
-          className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded"
-        >
-          Cargar Lista
-        </button>
       </div>
 
       {/* Lista de alumnos */}
