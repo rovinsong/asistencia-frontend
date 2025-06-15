@@ -1,3 +1,4 @@
+// src/pages/Alumnos.jsx
 import { useEffect, useState } from "react";
 import axios from "axios";
 
@@ -19,13 +20,21 @@ export default function Alumnos() {
   }, []);
 
   const fetchAlumnos = async () => {
-    const res = await axios.get(`${baseUrl}/alumnos`);
-    setAlumnos(res.data);
+    try {
+      const res = await axios.get(`${baseUrl}/alumnos`);
+      setAlumnos(res.data);
+    } catch (error) {
+      console.error("Error al cargar alumnos:", error);
+    }
   };
 
   const fetchTalleres = async () => {
-    const res = await axios.get(`${baseUrl}/talleres`);
-    setTalleres(res.data);
+    try {
+      const res = await axios.get(`${baseUrl}/talleres`);
+      setTalleres(res.data);
+    } catch (error) {
+      console.error("Error al cargar talleres:", error);
+    }
   };
 
   const handleChange = (e) => {
@@ -35,20 +44,35 @@ export default function Alumnos() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.nombreCompleto.trim() || !form.tallerId) return;
-    // Dividir nombre completo en nombre y apellidos
-    const parts = form.nombreCompleto.trim().split(' ');
+    const parts = form.nombreCompleto.trim().split(" ");
     const nombre = parts.shift();
-    const apellidos = parts.join(' ');
+    const apellidos = parts.join(" ");
 
-    await axios.post(`${baseUrl}/alumnos`, {
-      nombre,
-      apellidos,
-      direccion: form.direccion,
-      telefono: form.telefono,
-      tallerId: form.tallerId
-    });
-    setForm({ nombreCompleto: "", direccion: "", telefono: "", tallerId: "" });
-    fetchAlumnos();
+    try {
+      await axios.post(`${baseUrl}/alumnos`, {
+        nombre,
+        apellidos,
+        direccion: form.direccion,
+        telefono: form.telefono,
+        tallerId: form.tallerId
+      });
+      setForm({ nombreCompleto: "", direccion: "", telefono: "", tallerId: "" });
+      fetchAlumnos();
+    } catch (error) {
+      console.error("Error al crear alumno:", error);
+      alert("Error al crear alumno");
+    }
+  };
+
+  const handleRemove = async (alumnoId, tallerId) => {
+    if (!window.confirm("¿Eliminar este alumno de este taller?")) return;
+    try {
+      await axios.delete(`${baseUrl}/alumnos/${alumnoId}/talleres/${tallerId}`);
+      fetchAlumnos();
+    } catch (error) {
+      console.error("Error al eliminar alumno:", error);
+      alert("Error al eliminar alumno");
+    }
   };
 
   return (
@@ -91,7 +115,9 @@ export default function Alumnos() {
         >
           <option value="">Seleccionar Taller</option>
           {talleres.map((t) => (
-            <option key={t.id} value={t.id}>{t.nombre}</option>
+            <option key={t.id} value={t.id}>
+              {t.nombre}
+            </option>
           ))}
         </select>
 
@@ -108,11 +134,24 @@ export default function Alumnos() {
         {talleres.map((t) => (
           <div key={t.id} className="mb-6">
             <h2 className="text-lg font-semibold text-blue-300">{t.nombre}</h2>
-            <ul className="ml-4 mt-2 list-disc">
+            <ul className="space-y-2">
               {alumnos
                 .filter((a) => a.talleres.includes(t.id))
                 .map((a) => (
-                  <li key={a.id}>{`${a.nombre} ${a.apellidos}`}</li>
+                  <li
+                    key={a.id}
+                    className="flex items-center justify-between bg-gray-700 p-2 rounded"
+                  >
+                    <span className="text-white">
+                      {a.nombre} {a.apellidos}
+                    </span>
+                    <button
+                      onClick={() => handleRemove(a.id, t.id)}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      Eliminar
+                    </button>
+                  </li>
                 ))}
             </ul>
           </div>
