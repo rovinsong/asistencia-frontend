@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
 // Asegúrate de copiar tu spinner.gif en public/spinner.gif
@@ -10,6 +11,7 @@ export default function Asistencia() {
   const [alumnos, setAlumnos] = useState([]);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
+  const navigate = useNavigate();
   const baseUrl = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
@@ -50,7 +52,8 @@ export default function Asistencia() {
         axios.post(`${baseUrl}/asistencias`, payload),
         delay
       ]);
-      setMessage({ type: 'success', text: 'Asistencia guardada correctamente' });
+      // Redirigir a Historial mostrando taller y fecha
+      navigate(`/historial?taller_id=${selectedTaller}&fecha=${fecha}`);
     } catch (error) {
       console.error(error.response?.data || error);
       const errorMsg = error.response?.data?.error || error.message;
