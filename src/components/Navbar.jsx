@@ -14,6 +14,7 @@ export default function Navbar() {
     <nav className="bg-gray-800">
       <div className="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
         <Link to="/" className="flex items-center">
+          <img src="/icon.png" alt="Logo" className="h-8 w-8 mr-2" />
           <span className="self-center text-2xl font-semibold whitespace-nowrap text-white">
             Asistencia App
           </span>
@@ -32,7 +33,6 @@ export default function Navbar() {
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
           >
             <path
               strokeLinecap="round"
@@ -48,23 +48,35 @@ export default function Navbar() {
         >
           <ul className="flex flex-col md:flex-row md:space-x-8 mt-4 md:mt-0 md:text-sm md:font-medium">
             <li>
-              <Link to="/" className={linkClass("/")}>Inicio</Link>
+              <Link to="/" className={linkClass("/")}>
+                Inicio
+              </Link>
             </li>
             <li>
-              <Link to="/alumnos" className={linkClass("/alumnos")}>Alumnos</Link>
+              <Link to="/alumnos" className={linkClass("/alumnos")}>
+                Alumnos
+              </Link>
             </li>
             <li>
-              <Link to="/talleres" className={linkClass("/talleres")}>Talleres</Link>
+              <Link to="/talleres" className={linkClass("/talleres")}>
+                Talleres
+              </Link>
             </li>
             <li>
-              <Link to="/asistencia" className={linkClass("/asistencia")}>Asistencia</Link>
+              <Link to="/asistencia" className={linkClass("/asistencia")}>
+                Asistencia
+              </Link>
             </li>
             <li>
-              <Link to="/historial" className={linkClass("/historial")}>Historial</Link>
+              <Link to="/historial" className={linkClass("/historial")}>
+                Historial
+              </Link>
             </li>
             <li>
-              <Link to="/importar-alumnos" className={linkClass("/importar-alumnos")}>Importar CSV</Link>
-            </li>       
+              <Link to="/importar-alumnos" className={linkClass("/importar-alumnos")}>
+                Importar CSV
+              </Link>
+            </li>
           </ul>
         </div>
       </div>
