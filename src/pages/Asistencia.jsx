@@ -53,7 +53,7 @@ export default function Asistencia() {
         delay
       ]);
       // Redirigir a Historial mostrando taller y fecha
-      navigate(`/historial?taller_id=${selectedTaller}&fecha=${fecha}`);
+      navigate(`/historial?taller_id=${selectedTaller}&tallerId=${selectedTaller}&fecha=${fecha}`)
     } catch (error) {
       console.error(error.response?.data || error);
       const errorMsg = error.response?.data?.error || error.message;
