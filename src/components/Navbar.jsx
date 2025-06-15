@@ -14,7 +14,7 @@ export default function Navbar() {
     <nav className="bg-gray-800">
       <div className="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
         <Link to="/" className="flex items-center">
-          <img src="/icon.png" alt="Logo" className="h-10 w-10 mr-2" />
+          <img src="/icon.png" alt="Logo" className="h-16 w-16 mr-2" />
           <span className="self-center text-2xl font-semibold whitespace-nowrap text-white">
             Asistencia App
           </span>
