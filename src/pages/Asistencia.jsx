@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 
-// Asegúrate de copiar tu spinner.gif en public/spinner.gif para que src="/spinner.gif" funcione
+// Asegúrate de copiar tu spinner.gif en public/spinner.gif
 export default function Asistencia() {
   const [talleres, setTalleres] = useState([]);
   const [selectedTaller, setSelectedTaller] = useState("");
@@ -33,13 +33,18 @@ export default function Asistencia() {
   const handleSave = async () => {
     setSaving(true);
     setMessage(null);
+    const delay = new Promise(r => setTimeout(r, 2000));
+    const payload = {
+      taller_id: selectedTaller,
+      fecha,
+      asistencias: alumnos.map(a => ({ alumno_id: a.alumno_id, presente: a.presente }))
+    };
     try {
-      const payload = {
-        taller_id: selectedTaller,
-        fecha,
-        asistencias: alumnos.map(a => ({ alumno_id: a.alumno_id, presente: a.presente }))
-      };
-      await axios.post(`${baseUrl}/asistencias`, payload);
+      // Espera la petición y el delay mínimo de 2s
+      await Promise.all([
+        axios.post(`${baseUrl}/asistencias`, payload),
+        delay
+      ]);
       setMessage({ type: 'success', text: 'Asistencia guardada correctamente' });
     } catch (error) {
       console.error(error.response?.data || error);
@@ -60,7 +65,7 @@ export default function Asistencia() {
     <div className="p-4 text-white">
       <h1 className="text-xl font-bold mb-4">Registro de Asistencia</h1>
 
-      {/* Controles principales en fila */}
+      {/* Controles principales */}
       <div className="flex flex-wrap items-center space-x-2 mb-4">
         <select
           value={selectedTaller}
@@ -93,18 +98,19 @@ export default function Asistencia() {
         <>  
           <ul className="space-y-2">
             {alumnos.map(a => (
-              <li key={a.alumno_id} className="flex items-center space-x-2">
+              <li key={a.alumno_id} className="flex items-center justify-between bg-gray-800 p-2 rounded">
+                <span className="text-lg font-semibold">{a.nombre} {a.apellidos}</span>
                 <input
                   type="checkbox"
                   checked={a.presente}
                   onChange={() => togglePresente(a.alumno_id)}
+                  className="h-5 w-5 text-green-500"
                 />
-                <span>{a.nombre} {a.apellidos}</span>
               </li>
             ))}
           </ul>
 
-          {/* Botón Guardar con spinner */}
+          {/* Botón Guardar */}
           <div className="mt-4">
             <button
               onClick={handleSave}
@@ -133,4 +139,3 @@ export default function Asistencia() {
     </div>
   );
 }
-
