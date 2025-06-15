@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 
+// Asegúrate de copiar tu spinner.gif en public/spinner.gif para que src="/spinner.gif" funcione
 export default function Asistencia() {
   const [talleres, setTalleres] = useState([]);
   const [selectedTaller, setSelectedTaller] = useState("");
@@ -11,41 +12,48 @@ export default function Asistencia() {
   const baseUrl = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
-    axios.get(`${baseUrl}/talleres`).then(res => setTalleres(res.data));
+    axios.get(`${baseUrl}/talleres`)
+      .then(res => setTalleres(res.data))
+      .catch(err => console.error(err));
   }, []);
 
   const fetchAlumnos = () => {
     if (!selectedTaller || !fecha) return;
+    setMessage(null);
     axios.get(
       `${baseUrl}/asistencias?taller_id=${selectedTaller}&fecha=${fecha}`
     )
     .then(res => setAlumnos(res.data))
-    .catch(err => setMessage({ type: 'error', text: 'Error al cargar la lista' }));
+    .catch(err => {
+      console.error(err.response?.data || err);
+      setMessage({ type: 'error', text: 'Error al cargar la lista' });
+    });
   };
 
   const handleSave = async () => {
     setSaving(true);
     setMessage(null);
     try {
-      await axios.post(
-        `${baseUrl}/asistencias`,
-        {
-          taller_id: selectedTaller,
-          fecha,
-          asistencias: alumnos.map(a => ({ alumno_id: a.alumno_id, presente: a.presente }))
-        }
-      );
+      const payload = {
+        taller_id: selectedTaller,
+        fecha,
+        asistencias: alumnos.map(a => ({ alumno_id: a.alumno_id, presente: a.presente }))
+      };
+      await axios.post(`${baseUrl}/asistencias`, payload);
       setMessage({ type: 'success', text: 'Asistencia guardada correctamente' });
     } catch (error) {
-      console.error(error);
-      setMessage({ type: 'error', text: 'Error al guardar asistencia' });
+      console.error(error.response?.data || error);
+      const errorMsg = error.response?.data?.error || error.message;
+      setMessage({ type: 'error', text: `Error al guardar: ${errorMsg}` });
     } finally {
       setSaving(false);
     }
   };
 
   const togglePresente = (id) => {
-    setAlumnos(alumnos.map(a => a.alumno_id === id ? { ...a, presente: !a.presente } : a));
+    setAlumnos(alumnos.map(a =>
+      a.alumno_id === id ? { ...a, presente: !a.presente } : a
+    ));
   };
 
   return (
@@ -57,7 +65,7 @@ export default function Asistencia() {
         <select
           value={selectedTaller}
           onChange={e => setSelectedTaller(e.target.value)}
-          className="bg-gray-700 text-white p-2 rounded"
+          className="bg-gray-700 text-white p-2 rounded w-40"
         >
           <option value="">Seleccionar Taller</option>
           {talleres.map(t => (
@@ -69,7 +77,7 @@ export default function Asistencia() {
           type="date"
           value={fecha}
           onChange={e => setFecha(e.target.value)}
-          className="bg-gray-700 text-white p-2 rounded"
+          className="bg-gray-700 text-white p-2 rounded w-40"
         />
 
         <button
@@ -82,7 +90,7 @@ export default function Asistencia() {
 
       {/* Lista de alumnos */}
       {alumnos.length > 0 && (
-        <>
+        <>  
           <ul className="space-y-2">
             {alumnos.map(a => (
               <li key={a.alumno_id} className="flex items-center space-x-2">
@@ -125,3 +133,4 @@ export default function Asistencia() {
     </div>
   );
 }
+
