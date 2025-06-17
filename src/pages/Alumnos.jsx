@@ -21,6 +21,9 @@ export default function Alumnos() {
     telefono: ""
   });
 
+  // ← Nuevo estado para búsqueda
+  const [searchTerm, setSearchTerm] = useState("");
+
   const baseUrl = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
@@ -142,6 +145,17 @@ export default function Alumnos() {
     <div className="p-4 text-white">
       <h1 className="text-xl font-bold mb-4">Gestión de Alumnos</h1>
 
+      {/* — BARRA DE BÚSQUEDA — */}
+      <div className="mb-4">
+        <input
+          type="text"
+          placeholder="Buscar alumno..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full p-2 rounded bg-gray-700 text-white"
+        />
+      </div>
+
       {/* LISTADO AGRUPADO POR TALLER */}
       <div className="mt-6">
         {talleres.map((t) => (
@@ -149,7 +163,13 @@ export default function Alumnos() {
             <h2 className="text-lg font-semibold text-blue-300">{t.nombre}</h2>
             <ul className="space-y-2">
               {alumnos
+                // primero filtramos por taller...
                 .filter((a) => a.talleres.includes(t.id))
+                // ...luego por el término de búsqueda
+                .filter((a) => {
+                  const full = `${a.nombre} ${a.apellidos}`.toLowerCase();
+                  return full.includes(searchTerm.toLowerCase());
+                })
                 .map((a) => (
                   <li
                     key={a.id}
