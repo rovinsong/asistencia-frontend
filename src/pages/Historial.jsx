@@ -1,98 +1,174 @@
+// src/pages/Historial.jsx
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 
 export default function Historial() {
   const [talleres, setTalleres] = useState([]);
   const [tallerId, setTallerId] = useState('');
-  const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 10));
-  const [alumnoFiltro, setAlumnoFiltro] = useState('');
-  const [lista, setLista] = useState([]);
+  const [mes, setMes] = useState(new Date().toISOString().slice(0,7)); // YYYY-MM
+  const [data, setData] = useState({ columns: [], rows: [], totals: [] });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const baseUrl = import.meta.env.VITE_API_URL;
 
-  // Cargar talleres al montar
   useEffect(() => {
-    axios.get(`${baseUrl}/talleres`).then((res) => setTalleres(res.data));
+    // cargar talleres
+    axios.get(`${baseUrl}/talleres`)
+      .then((res) => setTalleres(res.data))
+      .catch((e) => console.error(e));
   }, []);
 
-  // Cargar historial cuando cambian taller, fecha o filtro de alumno
   useEffect(() => {
-    if (!tallerId) return;
-    const params = { taller_id: tallerId, fecha };
-    if (alumnoFiltro) params.alumno_id = alumnoFiltro;
-    axios
-      .get(`${baseUrl}/asistencias`, { params })
-      .then((res) => setLista(res.data));
-  }, [tallerId, fecha, alumnoFiltro]);
+    if (!tallerId || !mes) return;
+    loadMonthData();
+  }, [tallerId, mes]);
+
+  async function loadMonthData() {
+    setLoading(true);
+    setError(null);
+    try {
+      const [year, monthNum] = mes.split('-').map(Number);
+      // cuántos días tiene este mes:
+      const daysInMonth = new Date(year, monthNum, 0).getDate();
+      // lista de fechas "YYYY-MM-DD"
+      const dates = Array.from({ length: daysInMonth }, (_, i) => {
+        const d = i + 1;
+        return `${mes}-${String(d).padStart(2, '0')}`;
+      });
+
+      // Para cada fecha pedimos la asistencia
+      const requests = dates.map((fecha) =>
+        axios.get(`${baseUrl}/asistencias`, {
+          params: { taller_id: tallerId, fecha }
+        }).then(res => ({ fecha, lista: res.data }))
+      );
+
+      const results = await Promise.all(requests);
+
+      // Construir set de alumnos únicos
+      const alumnosMap = new Map();
+      results.forEach(({ lista }) => {
+        lista.forEach(r => {
+          if (!alumnosMap.has(r.alumno_id)) {
+            alumnosMap.set(r.alumno_id, {
+              alumno_id: r.alumno_id,
+              nombre: r.nombre,
+              apellidos: r.apellidos
+            });
+          }
+        });
+      });
+
+      const columns = dates; // fechas columna
+      // inicializar rows
+      const rows = Array.from(alumnosMap.values()).map(a => ({
+        ...a,
+        presentMap: Object.fromEntries(dates.map(d => [d, false]))
+      }));
+
+      // llenar presentMap
+      results.forEach(({ fecha, lista }) => {
+        const presenteIds = new Set(lista.filter(r => r.presente).map(r => r.alumno_id));
+        rows.forEach(row => {
+          row.presentMap[fecha] = presenteIds.has(row.alumno_id);
+        });
+      });
+
+      // total por fila y total por columna
+      const totals = {
+        byRow: rows.map(row =>
+          Object.values(row.presentMap).filter(v => v).length
+        ),
+        byCol: columns.map(col =>
+          rows.filter(row => row.presentMap[col]).length
+        )
+      };
+
+      setData({ columns, rows, totals });
+    } catch (e) {
+      console.error(e);
+      setError('Falló al cargar historial');
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div className="p-4 text-white">
-      <h1 className="text-2xl font-bold mb-4">Historial de Asistencia</h1>
+      <h1 className="text-2xl font-bold mb-4">Historial de Asistencia (mes completo)</h1>
 
-      {/* Filtros: Taller, Fecha, Alumno */}
-      <div className="grid sm:grid-cols-3 gap-4 mb-6">
+      <div className="grid sm:grid-cols-2 gap-4 mb-6">
         <select
           className="p-2 rounded bg-gray-700 text-white"
           value={tallerId}
-          onChange={(e) => setTallerId(e.target.value)}
+          onChange={e => setTallerId(e.target.value)}
         >
           <option value="">Seleccionar Taller</option>
-          {talleres.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.nombre}
-            </option>
+          {talleres.map(t => (
+            <option key={t.id} value={t.id}>{t.nombre}</option>
           ))}
         </select>
 
         <input
-          type="date"
+          type="month"
           className="p-2 rounded bg-gray-700 text-white"
-          value={fecha}
-          onChange={(e) => setFecha(e.target.value)}
-        />
-
-        <input
-          type="number"
-          placeholder="Filtrar por ID Alumno"
-          className="p-2 rounded bg-gray-700 text-white"
-          value={alumnoFiltro}
-          onChange={(e) => setAlumnoFiltro(e.target.value)}
+          value={mes}
+          onChange={e => setMes(e.target.value)}
         />
       </div>
 
-      {/* Tabla de resultados */}
-      {tallerId && (
-        <div className="bg-gray-800 rounded overflow-x-auto">
+      {loading && (
+        <div className="flex justify-center py-10">
+          <div className="animate-spin h-10 w-10 border-4 border-white border-t-transparent rounded-full"></div>
+        </div>
+      )}
+
+      {error && (
+        <div className="text-red-400">{error}</div>
+      )}
+
+      {!loading && !error && data.columns.length > 0 && (
+        <div className="overflow-x-auto bg-gray-800 rounded">
           <table className="min-w-full text-left">
             <thead>
               <tr className="border-b border-gray-700">
-                <th className="px-4 py-2">ID</th>
-                <th className="px-4 py-2">Alumno</th>
-                <th className="px-4 py-2">Asistencia</th>
+                <th className="px-2 py-1 sticky left-0 bg-gray-800">Alumno</th>
+                {data.columns.map(fecha => {
+                  const day = fecha.slice(-2);
+                  return <th key={fecha} className="px-2 py-1">{day}</th>;
+                })}
+                <th className="px-2 py-1">Total</th>
               </tr>
             </thead>
             <tbody>
-              {lista.map((r) => (
-                <tr key={r.alumno_id} className="border-b border-gray-700">
-                  <td className="px-4 py-2">{r.alumno_id}</td>
-                  <td className="px-4 py-2">
-                    {r.nombre} {r.apellidos}
-                  </td>
-                  <td className="px-4 py-2">
-                    {r.presente ? '✅ Presente' : '❌ Ausente'}
-                  </td>
+              {data.rows.map((row, idx) => (
+                <tr key={row.alumno_id} className="border-b border-gray-700">
+                  <td className="px-2 py-1 sticky left-0 bg-gray-800">{row.nombre} {row.apellidos}</td>
+                  {data.columns.map(col => (
+                    <td key={col} className="px-2 py-1">
+                      {row.presentMap[col] ? '✅' : ''}
+                    </td>
+                  ))}
+                  <td className="px-2 py-1">{data.totals.byRow[idx]}</td>
                 </tr>
               ))}
-              {lista.length === 0 && (
-                <tr>
-                  <td colSpan="3" className="px-4 py-2 text-center text-gray-400">
-                    No hay registros para estos filtros.
-                  </td>
-                </tr>
-              )}
             </tbody>
+            <tfoot>
+              <tr className="border-t border-gray-700">
+                <td className="px-2 py-1 sticky left-0 bg-gray-800">Total</td>
+                {data.totals.byCol.map((cnt, i) => (
+                  <td key={i} className="px-2 py-1 font-semibold">{cnt}</td>
+                ))}
+                <td className="px-2 py-1"></td>
+              </tr>
+            </tfoot>
           </table>
         </div>
+      )}
+
+      {!loading && !error && data.columns.length === 0 && tallerId && (
+        <div className="text-gray-400">No hay registros para este mes.</div>
       )}
     </div>
   );
