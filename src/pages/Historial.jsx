@@ -39,15 +39,26 @@ export default function Historial() {
 
       // ——— FILTRO: quedarnos solo con los días del taller ——————————————————
       const taller = talleres.find(t => String(t.id) === tallerId);
-      const allowedDias = taller?.dias || []; // array de strings, p.e. ["Lunes","Miércoles"]
-      const allowedLower = allowedDias.map(d => d.toLowerCase());
-      // mantener solo fechas cuyo weekday (es-ES) coincida
-      const dates = allDates.filter(fecha => {
-        const weekday = new Date(fecha)
-          .toLocaleDateString('es-ES', { weekday: 'long' });
-        return allowedLower.includes(weekday);
-      });
-      // ————————————————————————————————————————————————————————————————
+      const diasArray = taller?.dias || []; // p.ej. ["Lunes","Miércoles"]
+      // Mapa día -> número:
+      const diasMap = {
+        domingo: 0,
+        lunes:   1,
+        martes:  2,
+        miercoles: 3, 'miércoles': 3,
+        jueves:  4,
+        viernes: 5,
+        sabado:  6, 'sábado':   6
+      };
+      // Convertimos los días permitidos en índices:
+      const allowedNums = diasArray
+        .map(d => diasMap[d.toLowerCase()])
+        .filter(n => n !== undefined);
+      // Filtramos las fechas por su getDay():
+      const dates = allDates.filter(fecha => 
+        allowedNums.includes(new Date(fecha).getDay())
+      );
+      // ———————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
 
       // Para cada fecha pedimos la asistencia
       const requests = dates.map((fecha) =>
