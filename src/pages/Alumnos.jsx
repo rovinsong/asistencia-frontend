@@ -1,16 +1,25 @@
+// src/pages/Alumnos.jsx
 import { useEffect, useState } from "react";
 import axios from "axios";
 
 export default function Alumnos() {
   const [alumnos, setAlumnos] = useState([]);
   const [talleres, setTalleres] = useState([]);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [form, setForm] = useState({
     nombreCompleto: "",
     direccion: "",
     telefono: "",
     tallerId: ""
   });
-  const [showModal, setShowModal] = useState(false);
+  const [editData, setEditData] = useState({
+    alumnoId: null,
+    tallerId: null,
+    nombreCompleto: "",
+    direccion: "",
+    telefono: ""
+  });
 
   const baseUrl = import.meta.env.VITE_API_URL;
 
@@ -37,29 +46,31 @@ export default function Alumnos() {
     }
   };
 
-  const handleChange = (e) => {
+  // ——— AGREGAR ALUMNO ——————————————————————
+  const openAdd = () => setShowAddModal(true);
+  const closeAdd = () => {
+    setShowAddModal(false);
+    setForm({ nombreCompleto: "", direccion: "", telefono: "", tallerId: "" });
+  };
+
+  const handleAddChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!form.nombreCompleto.trim() || !form.tallerId) return;
-    // Dividir nombre completo
     const parts = form.nombreCompleto.trim().split(" ");
     const nombre = parts.shift();
     const apellidos = parts.join(" ");
-
     try {
       await axios.post(`${baseUrl}/alumnos`, {
-        nombre,
-        apellidos,
+        nombre, apellidos,
         direccion: form.direccion,
         telefono: form.telefono,
         tallerId: form.tallerId
       });
-      // reset
-      setForm({ nombreCompleto: "", direccion: "", telefono: "", tallerId: "" });
-      setShowModal(false);
+      closeAdd();
       fetchAlumnos();
     } catch (error) {
       console.error("Error al crear alumno:", error);
@@ -67,14 +78,63 @@ export default function Alumnos() {
     }
   };
 
-  const handleRemove = async (alumnoId, tallerId) => {
+  // ——— EDITAR / ELIMINAR EN TALLER ——————————————————————
+  const openEdit = (a, tId) => {
+    setEditData({
+      alumnoId: a.id,
+      tallerId: tId,
+      nombreCompleto: `${a.nombre} ${a.apellidos}`,
+      direccion: a.direccion || "",
+      telefono: a.telefono || ""
+    });
+    setShowEditModal(true);
+  };
+  const closeEdit = () => {
+    setShowEditModal(false);
+    setEditData({
+      alumnoId: null,
+      tallerId: null,
+      nombreCompleto: "",
+      direccion: "",
+      telefono: ""
+    });
+  };
+
+  const handleEditChange = (e) => {
+    setEditData({ ...editData, [e.target.name]: e.target.value });
+  };
+
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+    const { alumnoId, nombreCompleto, direccion, telefono } = editData;
+    if (!nombreCompleto.trim()) return;
+    const parts = nombreCompleto.trim().split(" ");
+    const nombre = parts.shift();
+    const apellidos = parts.join(" ");
+    try {
+      await axios.put(`${baseUrl}/alumnos/${alumnoId}`, {
+        nombre, apellidos, direccion, telefono
+      });
+      closeEdit();
+      fetchAlumnos();
+    } catch (error) {
+      console.error("Error al actualizar alumno:", error);
+      alert("Error al actualizar");
+    }
+  };
+
+  const handleRemove = async () => {
+    const { alumnoId, tallerId } = editData;
     if (!window.confirm("¿Eliminar este alumno de este taller?")) return;
     try {
-      await axios.delete(`${baseUrl}/alumnos/${alumnoId}/talleres/${tallerId}`);
+      await axios.delete(
+        `${baseUrl}/alumnos/${alumnoId}/talleres/${tallerId}`
+      );
+      closeEdit();
       fetchAlumnos();
     } catch (error) {
       console.error("Error al eliminar alumno:", error);
-      alert("Error al eliminar alumno");
+      alert("Error al eliminar");
     }
   };
 
@@ -99,10 +159,10 @@ export default function Alumnos() {
                       {a.nombre} {a.apellidos}
                     </span>
                     <button
-                      onClick={() => handleRemove(a.id, t.id)}
-                      className="text-red-500 hover:text-red-700"
+                      onClick={() => openEdit(a, t.id)}
+                      className="text-yellow-400 hover:text-yellow-500"
                     >
-                      Eliminar
+                      Editar
                     </button>
                   </li>
                 ))}
@@ -111,62 +171,57 @@ export default function Alumnos() {
         ))}
       </div>
 
-      {/* Botón para abrir modal */}
+      {/* BOTÓN AGREGAR */}
       <div className="mt-8">
         <button
-          onClick={() => setShowModal(true)}
+          onClick={openAdd}
           className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded"
         >
           Agregar Alumno
         </button>
       </div>
 
-      {/* Modal de Agregar Alumno */}
-      {showModal && (
+      {/* MODAL AGREGAR */}
+      {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-gray-800 p-6 rounded w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4 text-white">Nuevo Alumno</h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <h2 className="text-xl font-bold mb-4">Nuevo Alumno</h2>
+            <form onSubmit={handleAddSubmit} className="space-y-4">
               <input
-                type="text"
                 name="nombreCompleto"
-                placeholder="Nombre Completo"
                 value={form.nombreCompleto}
-                onChange={handleChange}
+                onChange={handleAddChange}
+                placeholder="Nombre Completo"
                 className="w-full p-2 rounded bg-gray-700 text-white"
                 required
               />
               <input
-                type="text"
                 name="direccion"
-                placeholder="Dirección"
                 value={form.direccion}
-                onChange={handleChange}
+                onChange={handleAddChange}
+                placeholder="Dirección"
                 className="w-full p-2 rounded bg-gray-700 text-white"
               />
               <input
-                type="text"
                 name="telefono"
-                placeholder="Teléfono"
                 value={form.telefono}
-                onChange={handleChange}
+                onChange={handleAddChange}
+                placeholder="Teléfono"
                 className="w-full p-2 rounded bg-gray-700 text-white"
               />
               <select
                 name="tallerId"
                 value={form.tallerId}
-                onChange={handleChange}
+                onChange={handleAddChange}
                 className="w-full p-2 rounded bg-gray-700 text-white"
                 required
               >
                 <option value="">Seleccionar Taller</option>
                 {talleres.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.nombre}
-                  </option>
+                  <option key={t.id} value={t.id}>{t.nombre}</option>
                 ))}
               </select>
-              <div className="flex justify-between space-x-2">
+              <div className="flex space-x-2">
                 <button
                   type="submit"
                   className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded"
@@ -175,13 +230,68 @@ export default function Alumnos() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
+                  onClick={closeAdd}
                   className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-2 rounded"
                 >
                   Cancelar
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL EDITAR */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 p-6 rounded w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">Editar Alumno</h2>
+            <form onSubmit={handleUpdate} className="space-y-4">
+              <input
+                name="nombreCompleto"
+                value={editData.nombreCompleto}
+                onChange={handleEditChange}
+                placeholder="Nombre Completo"
+                className="w-full p-2 rounded bg-gray-700 text-white"
+                required
+              />
+              <input
+                name="direccion"
+                value={editData.direccion}
+                onChange={handleEditChange}
+                placeholder="Dirección"
+                className="w-full p-2 rounded bg-gray-700 text-white"
+              />
+              <input
+                name="telefono"
+                value={editData.telefono}
+                onChange={handleEditChange}
+                placeholder="Teléfono"
+                className="w-full p-2 rounded bg-gray-700 text-white"
+              />
+              <div className="flex space-x-2">
+                <button
+                  type="submit"
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded"
+                >
+                  Guardar
+                </button>
+                <button
+                  type="button"
+                  onClick={closeEdit}
+                  className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-2 rounded"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+            <hr className="my-4 border-gray-700" />
+            <button
+              onClick={handleRemove}
+              className="w-full py-2 rounded bg-red-600 hover:bg-red-700 text-white"
+            >
+              Eliminar de este taller
+            </button>
           </div>
         </div>
       )}
