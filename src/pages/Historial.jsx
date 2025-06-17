@@ -40,13 +40,13 @@ export default function Historial() {
       const taller = talleres.find(t => String(t.id) === tallerId);
       const diasArray = taller?.dias || [];
       const diasMap = {
-        domingo:   6,
-        lunes:     0,
-        martes:    1,
-        miercoles: 2,
-        jueves:    3,
-        viernes:   4,
-        sabado:    5, 
+        Domingo:   0,
+        Lunes:     1,
+        Martes:    2,
+        Miércoles: 3,
+        Jueves:    4,
+        Viernes:   5,
+        Sabado:    6, 
       };
       const allowedNums = diasArray
         .map(d => diasMap[d.toLowerCase()])
