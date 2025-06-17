@@ -27,11 +27,12 @@ export default function Historial() {
   async function loadMonthData() {
     setLoading(true);
     setError(null);
+
     try {
       const [year, monthNum] = mes.split('-').map(Number);
       // cuántos días tiene este mes:
       const daysInMonth = new Date(year, monthNum, 0).getDate();
-      // lista de fechas "YYYY-MM-DD"
+      // lista de todas las fechas del mes "YYYY-MM-DD"
       const allDates = Array.from({ length: daysInMonth }, (_, i) => {
         const d = i + 1;
         return `${mes}-${String(d).padStart(2, '0')}`;
@@ -39,8 +40,7 @@ export default function Historial() {
 
       // ——— FILTRO: quedarnos solo con los días del taller ——————————————————
       const taller = talleres.find(t => String(t.id) === tallerId);
-      const diasArray = taller?.dias || []; // p.ej. ["Lunes","Miércoles"]
-      // Mapa día -> número:
+      const diasArray = taller?.dias || []; // ej. ["Lunes","Miércoles"]
       const diasMap = {
         domingo: 0,
         lunes:   1,
@@ -50,23 +50,22 @@ export default function Historial() {
         viernes: 5,
         sabado:  6, 'sábado':   6
       };
-      // Convertimos los días permitidos en índices:
+      // convertimos los días permitidos en índices de getDay()
       const allowedNums = diasArray
         .map(d => diasMap[d.toLowerCase()])
         .filter(n => n !== undefined);
-      // Filtramos las fechas por su getDay():
-      const dates = allDates.filter(fecha => 
+      // filtramos solo las fechas cuyos getDay() esté en allowedNums
+      const dates = allDates.filter(fecha =>
         allowedNums.includes(new Date(fecha).getDay())
       );
-      // ———————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
+      // —————————————————————————————————————————————————————————————————————————————————
 
       // Para cada fecha pedimos la asistencia
-      const requests = dates.map((fecha) =>
+      const requests = dates.map(fecha =>
         axios.get(`${baseUrl}/asistencias`, {
           params: { taller_id: tallerId, fecha }
         }).then(res => ({ fecha, lista: res.data }))
       );
-
       const results = await Promise.all(requests);
 
       // Construir set de alumnos únicos
@@ -83,21 +82,23 @@ export default function Historial() {
         });
       });
 
-      // inicializar rows
+      // Inicializar filas con un mapa de presencias por fecha
       const rows = Array.from(alumnosMap.values()).map(a => ({
         ...a,
         presentMap: Object.fromEntries(dates.map(d => [d, false]))
       }));
 
-      // llenar presentMap
+      // Llenar presencias
       results.forEach(({ fecha, lista }) => {
-        const presenteIds = new Set(lista.filter(r => r.presente).map(r => r.alumno_id));
+        const presentes = new Set(
+          lista.filter(r => r.presente).map(r => r.alumno_id)
+        );
         rows.forEach(row => {
-          row.presentMap[fecha] = presenteIds.has(row.alumno_id);
+          row.presentMap[fecha] = presentes.has(row.alumno_id);
         });
       });
 
-      // total por fila y total por columna
+      // Totales por fila y columna
       const totals = {
         byRow: rows.map(row =>
           Object.values(row.presentMap).filter(v => v).length
@@ -120,6 +121,7 @@ export default function Historial() {
     <div className="p-4 text-white">
       <h1 className="text-2xl font-bold mb-4">Historial de Asistencia (mes completo)</h1>
 
+      {/* Filtros: Taller y Mes */}
       <div className="grid sm:grid-cols-2 gap-4 mb-6">
         <select
           className="p-2 rounded bg-gray-700 text-white"
@@ -140,16 +142,17 @@ export default function Historial() {
         />
       </div>
 
+      {/* Spinner */}
       {loading && (
         <div className="flex justify-center py-10">
           <div className="animate-spin h-10 w-10 border-4 border-white border-t-transparent rounded-full"></div>
         </div>
       )}
 
-      {error && (
-        <div className="text-red-400">{error}</div>
-      )}
+      {/* Error */}
+      {error && <div className="text-red-400">{error}</div>}
 
+      {/* Tabla de resultados */}
       {!loading && !error && data.columns.length > 0 && (
         <div className="overflow-x-auto bg-gray-800 rounded">
           <table className="min-w-full text-left">
@@ -166,7 +169,9 @@ export default function Historial() {
             <tbody>
               {data.rows.map((row, idx) => (
                 <tr key={row.alumno_id} className="border-b border-gray-700">
-                  <td className="px-2 py-1 sticky left-0 bg-gray-800">{row.nombre} {row.apellidos}</td>
+                  <td className="px-2 py-1 sticky left-0 bg-gray-800">
+                    {row.nombre} {row.apellidos}
+                  </td>
                   {data.columns.map(col => (
                     <td key={col} className="px-2 py-1">
                       {row.presentMap[col] ? '✅' : ''}
@@ -189,6 +194,7 @@ export default function Historial() {
         </div>
       )}
 
+      {/* Mensaje si no hay datos */}
       {!loading && !error && data.columns.length === 0 && tallerId && (
         <div className="text-gray-400">No hay registros para este mes.</div>
       )}
