@@ -30,72 +30,82 @@ export default function Historial() {
       const [year, monthNum] = mes.split('-').map(Number);
       const daysInMonth = new Date(year, monthNum, 0).getDate();
 
-      // 1) Generar todas las fechas del mes
+      // 1) Todas las fechas del mes "YYYY-MM-DD"
       const allDates = Array.from({ length: daysInMonth }, (_, i) => {
         const d = i + 1;
         return `${mes}-${String(d).padStart(2, '0')}`;
       });
 
-      // 2) Filtrar según días configurados en el taller
-      const taller = talleres.find(t => String(t.id) === tallerId);
-      const diasArray = taller?.dias || [];
+      // 2) Obtenemos los días configurados para este taller
+      const taller = talleres.find(t => t.id === Number(tallerId));
+      const diasArray = Array.isArray(taller?.dias) ? taller.dias : [];
+
+      // Mapa día (minúscula) → índice JS getDay()
       const diasMap = {
         'domingo':   0,
         'lunes':     1,
         'martes':    2,
-        'miercoles': 3,  // sin tilde
-        'miércoles': 3,  // con tilde
+        'miercoles': 3,
+        'miércoles': 3,
         'jueves':    4,
         'viernes':   5,
-        'sabado':    6,  // sin tilde
-        'sábado':    6   // con tilde
+        'sabado':    6,
+        'sábado':    6
       };
-      const allowedNums = diasArray
-        .map(d => diasMap[d.toLowerCase()])
-        .filter(n => n !== undefined);
 
+      // convertimos y filtramos sólo los índices válidos
+      const allowedNums = diasArray
+        .map(d => d.trim().toLowerCase())
+        .map(d => diasMap[d])
+        .filter(n => typeof n === 'number');
+
+      // 3) Filtramos sólo las fechas cuyo día de la semana esté entre allowedNums
       const dates = allDates.filter(fecha => {
         const dayNum = new Date(fecha).getDay();
         return allowedNums.includes(dayNum);
       });
 
-      // 3) Peticiones de asistencia sólo a esas fechas
+      // 4) Hacemos las peticiones de asistencia únicamente para esas fechas
       const requests = dates.map(fecha =>
         axios
-          .get(`${baseUrl}/asistencias`, { params: { taller_id: tallerId, fecha } })
+          .get(`${baseUrl}/asistencias`, {
+            params: { taller_id: tallerId, fecha }
+          })
           .then(res => ({ fecha, lista: res.data }))
       );
       const results = await Promise.all(requests);
 
-      // 4) Construir set de alumnos únicos
+      // 5) Construir set único de alumnos
       const alumnosMap = new Map();
       results.forEach(({ lista }) => {
         lista.forEach(r => {
           if (!alumnosMap.has(r.alumno_id)) {
             alumnosMap.set(r.alumno_id, {
               alumno_id: r.alumno_id,
-              nombre: r.nombre,
-              apellidos: r.apellidos
+              nombre:     r.nombre,
+              apellidos:  r.apellidos
             });
           }
         });
       });
 
-      // 5) Inicializar filas
+      // 6) Inicializar filas con un mapa de presencias por fecha
       const rows = Array.from(alumnosMap.values()).map(a => ({
         ...a,
         presentMap: Object.fromEntries(dates.map(d => [d, false]))
       }));
 
-      // 6) Llenar presencias
+      // 7) Rellenar las presencias
       results.forEach(({ fecha, lista }) => {
-        const presentes = new Set(lista.filter(r => r.presente).map(r => r.alumno_id));
+        const presentes = new Set(
+          lista.filter(r => r.presente).map(r => r.alumno_id)
+        );
         rows.forEach(row => {
           row.presentMap[fecha] = presentes.has(row.alumno_id);
         });
       });
 
-      // 7) Calcular totales
+      // 8) Calcular totales por fila y columna
       const totals = {
         byRow: rows.map(row =>
           Object.values(row.presentMap).filter(v => v).length
@@ -106,14 +116,13 @@ export default function Historial() {
       };
 
       setData({ columns: dates, rows, totals });
-
     } catch (e) {
       console.error(e);
       setError('Falló al cargar historial');
     } finally {
       setLoading(false);
     }
-  }  // ← Aquí cerramos loadMonthData
+  }// ← Aquí cerramos loadMonthData
 
   return (
     <div className="p-4 text-white">
