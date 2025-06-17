@@ -32,10 +32,22 @@ export default function Historial() {
       // cuántos días tiene este mes:
       const daysInMonth = new Date(year, monthNum, 0).getDate();
       // lista de fechas "YYYY-MM-DD"
-      const dates = Array.from({ length: daysInMonth }, (_, i) => {
+      const allDates = Array.from({ length: daysInMonth }, (_, i) => {
         const d = i + 1;
         return `${mes}-${String(d).padStart(2, '0')}`;
       });
+
+      // ——— FILTRO: quedarnos solo con los días del taller ——————————————————
+      const taller = talleres.find(t => String(t.id) === tallerId);
+      const allowedDias = taller?.dias || []; // array de strings, p.e. ["Lunes","Miércoles"]
+      const allowedLower = allowedDias.map(d => d.toLowerCase());
+      // mantener solo fechas cuyo weekday (es-ES) coincida
+      const dates = allDates.filter(fecha => {
+        const weekday = new Date(fecha)
+          .toLocaleDateString('es-ES', { weekday: 'long' });
+        return allowedLower.includes(weekday);
+      });
+      // ————————————————————————————————————————————————————————————————
 
       // Para cada fecha pedimos la asistencia
       const requests = dates.map((fecha) =>
@@ -60,7 +72,6 @@ export default function Historial() {
         });
       });
 
-      const columns = dates; // fechas columna
       // inicializar rows
       const rows = Array.from(alumnosMap.values()).map(a => ({
         ...a,
@@ -80,12 +91,12 @@ export default function Historial() {
         byRow: rows.map(row =>
           Object.values(row.presentMap).filter(v => v).length
         ),
-        byCol: columns.map(col =>
+        byCol: dates.map(col =>
           rows.filter(row => row.presentMap[col]).length
         )
       };
 
-      setData({ columns, rows, totals });
+      setData({ columns: dates, rows, totals });
     } catch (e) {
       console.error(e);
       setError('Falló al cargar historial');
