@@ -32,90 +32,82 @@ export default function Historial() {
       const [year, monthNum] = mes.split('-').map(Number);
       // cuántos días tiene este mes:
       const daysInMonth = new Date(year, monthNum, 0).getDate();
-      // lista de todas las fechas del mes "YYYY-MM-DD"
+      // 1) Generar todas las fechas del mes "YYYY-MM-DD"
       const allDates = Array.from({ length: daysInMonth }, (_, i) => {
         const d = i + 1;
         return `${mes}-${String(d).padStart(2, '0')}`;
       });
+// 2) FILTRO: quedarnos solo con los días de la semana configurados para el taller
+const taller = talleres.find(t => String(t.id) === tallerId);
+const diasArray = taller?.dias || [];  // p.ej. ["Lunes","Miércoles"]
+// Mapa de nombre de día (en minúscula) → índice getDay()
+const diasMap = {
+  domingo:   0,
+  lunes:     1,
+  martes:    2,
+  miercoles: 3, 'miércoles': 3,
+  jueves:    4,
+  viernes:   5,
+  sabado:    6, 'sábado':    6
+};
+     // Convertimos los días permitidos en sus índices
+const allowedNums = diasArray
+  .map(d => diasMap[d.toLowerCase()])
+  .filter(n => n !== undefined);
 
-      // ——— FILTRO: quedarnos solo con los días del taller ——————————————————
-      const taller = talleres.find(t => String(t.id) === tallerId);
-      const diasArray = taller?.dias || []; // ej. ["Lunes","Miércoles"]
-      const diasMap = {
-        domingo: 0,
-        lunes:   1,
-        martes:  2,
-        miercoles: 3, 'miércoles': 3,
-        jueves:  4,
-        viernes: 5,
-        sabado:  6, 'sábado':   6
-      };
-      // convertimos los días permitidos en índices de getDay()
-      const allowedNums = diasArray
-        .map(d => diasMap[d.toLowerCase()])
-        .filter(n => n !== undefined);
-      // filtramos solo las fechas cuyos getDay() esté en allowedNums
-      const dates = allDates.filter(fecha =>
-        allowedNums.includes(new Date(fecha).getDay())
-      );
+     // Filtramos solo las fechas cuyo día de la semana esté permitido
+const dates = allDates.filter(fecha => {
+  const dayNum = new Date(fecha).getDay();
+  return allowedNums.includes(dayNum);
+});
       // —————————————————————————————————————————————————————————————————————————————————
 
-      // Para cada fecha pedimos la asistencia
-      const requests = dates.map(fecha =>
-        axios.get(`${baseUrl}/asistencias`, {
-          params: { taller_id: tallerId, fecha }
-        }).then(res => ({ fecha, lista: res.data }))
-      );
-      const results = await Promise.all(requests);
+     // Para cada fecha pedimos la asistencia
+const requests = dates.map(fecha =>
+  axios.get(`${baseUrl}/asistencias`, {
+    params: { taller_id: tallerId, fecha }
+  }).then(res => ({ fecha, lista: res.data }))
+);
+const results = await Promise.all(requests);
 
-      // Construir set de alumnos únicos
-      const alumnosMap = new Map();
-      results.forEach(({ lista }) => {
-        lista.forEach(r => {
-          if (!alumnosMap.has(r.alumno_id)) {
-            alumnosMap.set(r.alumno_id, {
-              alumno_id: r.alumno_id,
-              nombre: r.nombre,
-              apellidos: r.apellidos
-            });
-          }
-        });
+    // 4) Construir set de alumnos únicos
+const alumnosMap = new Map();
+results.forEach(({ lista }) => {
+  lista.forEach(r => {
+    if (!alumnosMap.has(r.alumno_id)) {
+      alumnosMap.set(r.alumno_id, {
+        alumno_id: r.alumno_id,
+        nombre: r.nombre,
+        apellidos: r.apellidos
       });
-
-      // Inicializar filas con un mapa de presencias por fecha
-      const rows = Array.from(alumnosMap.values()).map(a => ({
-        ...a,
-        presentMap: Object.fromEntries(dates.map(d => [d, false]))
-      }));
-
-      // Llenar presencias
-      results.forEach(({ fecha, lista }) => {
-        const presentes = new Set(
-          lista.filter(r => r.presente).map(r => r.alumno_id)
-        );
-        rows.forEach(row => {
-          row.presentMap[fecha] = presentes.has(row.alumno_id);
-        });
-      });
-
-      // Totales por fila y columna
-      const totals = {
-        byRow: rows.map(row =>
-          Object.values(row.presentMap).filter(v => v).length
-        ),
-        byCol: dates.map(col =>
-          rows.filter(row => row.presentMap[col]).length
-        )
-      };
-
-      setData({ columns: dates, rows, totals });
-    } catch (e) {
-      console.error(e);
-      setError('Falló al cargar historial');
-    } finally {
-      setLoading(false);
     }
-  }
+  });
+});
+
+     // 5) Inicializar filas con un mapa de presencias por fecha
+const rows = Array.from(alumnosMap.values()).map(a => ({
+  ...a,
+  presentMap: Object.fromEntries(dates.map(d => [d, false]))
+}));
+      // 6) Llenar presencias
+results.forEach(({ fecha, lista }) => {
+  const presentes = new Set(lista.filter(r => r.presente).map(r => r.alumno_id));
+  rows.forEach(row => {
+    row.presentMap[fecha] = presentes.has(row.alumno_id);
+  });
+});
+// 7) Calcular totales
+const totals = {
+  byRow: rows.map(row =>
+    Object.values(row.presentMap).filter(v => v).length
+  ),
+  byCol: dates.map(col =>
+    rows.filter(row => row.presentMap[col]).length
+  )
+};
+
+setData({ columns: dates, rows, totals });
+
 
   return (
     <div className="p-4 text-white">
