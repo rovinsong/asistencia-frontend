@@ -178,7 +178,7 @@ export default function Historial() {
                   // nombres abreviados
                   const nombres = ['Dom','Lun','Mar','Mie','Jue','Vie','Sab'];
                   return (
-                    <th key={fecha} className="px-2 py-1 text-center">
+                    <th key={fecha} className="px-2 py-1">
                       <div className="text-xs">{nombres[diaSemana]}</div>
                       <div className="text-sm">{String(d).padStart(2,'0')}</div>
                     </th>
