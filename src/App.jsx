@@ -5,7 +5,8 @@ import Alumnos from "./pages/Alumnos"
 import Talleres from "./pages/Talleres"
 import Asistencia from "./pages/Asistencia"
 import Historial from "./pages/Historial"
-import ImportarAlumnos from "./pages/ImportarAlumnos";
+import ImportarAlumnos from "./pages/ImportarAlumnos"
+import ExportAsistencia from './pages/Export';
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
           <Route path="/asistencia" element={<Asistencia />} />
           <Route path="/historial" element={<Historial />} />
           <Route path="/importar-alumnos" element={<ImportarAlumnos />} />
+          <Route path="/export" element={<ExportAsistencia />} />
         </Routes>
       </div>
     </Router>

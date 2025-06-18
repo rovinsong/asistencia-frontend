@@ -77,6 +77,11 @@ export default function Navbar() {
                 Importar CSV
               </Link>
             </li>
+            <li>
+              <Link to="/export" className={linkClass("/export")}>
+                Exportar Asistencia
+              </Link>
+            </li>
           </ul>
         </div>
       </div>
