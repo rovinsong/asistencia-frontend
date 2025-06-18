@@ -96,7 +96,7 @@ export default function ExportAsistencia() {
 
       // 6) Generar y descargar Excel con cabecera “Número de día”
       const wb = XLSX.utils.book_new();
-      const headers = ['Nombre Completo', 'Dirección', 'Teléfono', ...days];
+      const headers = ['Nombre', 'Dirección', 'Teléfono', ...days];
       const ws = XLSX.utils.json_to_sheet(excelData, { header: headers });
       XLSX.utils.book_append_sheet(wb, ws, 'Asistencia');
       XLSX.writeFile(wb, `asistencia_${tallerId}_${mes}.xlsx`);
