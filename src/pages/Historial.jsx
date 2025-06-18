@@ -171,9 +171,19 @@ export default function Historial() {
             <thead>
               <tr className="border-b border-gray-700">
                 <th className="px-2 py-1 sticky left-0 bg-gray-800">Alumno</th>
-                {data.columns.map(fecha => (
-                  <th key={fecha} className="px-2 py-1">{fecha.slice(-2)}</th>
-                ))}
+                {data.columns.map(fecha => {
+                  // descomponemos "YYYY-MM-DD"
+                  const [y, m, d] = fecha.split('-').map(Number);
+                  const diaSemana = new Date(y, m - 1, d).getDay();
+                  // nombres abreviados
+                  const nombres = ['Dom','Lun','Mar','Mie','Jue','Vie','Sab'];
+                  return (
+                    <th key={fecha} className="px-2 py-1 text-center">
+                      <div className="text-xs">{nombres[diaSemana]}</div>
+                      <div className="text-sm">{String(d).padStart(2,'0')}</div>
+                    </th>
+                  );
+                })}
                 <th className="px-2 py-1">Total</th>
               </tr>
             </thead>
