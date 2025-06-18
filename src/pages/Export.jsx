@@ -1,3 +1,4 @@
+// src/pages/ExportAsistencia.jsx
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
@@ -5,13 +6,13 @@ import * as XLSX from 'xlsx';
 export default function ExportAsistencia() {
   const [talleres, setTalleres] = useState([]);
   const [tallerId, setTallerId] = useState('');
-  const [mes, setMes] = useState(new Date().toISOString().slice(0,7)); // YYYY-MM
+  const [mes, setMes] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
   const [loading, setLoading] = useState(false);
+  const [alumnosFull, setAlumnosFull] = useState([]);
   const baseUrl = import.meta.env.VITE_API_URL;
 
-  // Carga lista de talleres y alumnos
-  const [alumnosFull, setAlumnosFull] = useState([]);
   useEffect(() => {
+    // Carga talleres y alumnos
     axios.get(`${baseUrl}/talleres`).then(res => setTalleres(res.data));
     axios.get(`${baseUrl}/alumnos`).then(res => setAlumnosFull(res.data));
   }, []);
@@ -20,53 +21,83 @@ export default function ExportAsistencia() {
     if (!tallerId || !mes) return;
     setLoading(true);
     try {
-      // 1) Generar fechas del mes filtradas por días del taller
+      // --- 1) Generar todas las fechas del mes ---
       const [year, monthNum] = mes.split('-').map(Number);
       const daysInMonth = new Date(year, monthNum, 0).getDate();
-      const allDates = Array.from({ length: daysInMonth }, (_, i) =>
-        `${mes}-${String(i+1).padStart(2,'0')}`
-      );
+      const allDates = Array.from({ length: daysInMonth }, (_, i) => {
+        const d = i + 1;
+        return `${mes}-${String(d).padStart(2, '0')}`;
+      });
+
+      // --- 2) Filtrar sólo días configurados en el taller ---
       const taller = talleres.find(t => t.id === Number(tallerId));
       const diasArray = Array.isArray(taller.dias) ? taller.dias : [];
-      const diasMap = { domingo:0, lunes:1, martes:2, miercoles:3, 'miércoles':3, jueves:4, viernes:5, sabado:6, 'sábado':6 };
-      const allowed = diasArray.map(d => diasMap[d.toLowerCase()]).filter(n => typeof n==='number');
-      const fechas = allDates.filter(f => allowed.includes(new Date(f).getDay()));
+      const diasMap = {
+        domingo:   0,
+        lunes:     1,
+        martes:    2,
+        miercoles: 3, 'miércoles': 3,
+        jueves:    4,
+        viernes:   5,
+        sabado:    6, 'sábado':    6
+      };
+      const allowedNums = diasArray
+        .map(d => diasMap[d.toLowerCase()])
+        .filter(n => typeof n === 'number');
 
-      // 2) Obtener asistencia para cada fecha
+      const fechas = allDates.filter(fecha => {
+        const [y, m, d] = fecha.split('-').map(Number);
+        // Usamos year, monthIndex (m-1), day para evitar desfases
+        const dayNum = new Date(y, m - 1, d).getDay();
+        return allowedNums.includes(dayNum);
+      });
+
+      // --- 3) Obtener asistencias sólo para esas fechas ---
       const requests = fechas.map(fecha =>
-        axios.get(`${baseUrl}/asistencias`, { params: { taller_id: tallerId, fecha } })
+        axios
+          .get(`${baseUrl}/asistencias`, { params: { taller_id: tallerId, fecha } })
           .then(res => ({ fecha, lista: res.data }))
       );
       const results = await Promise.all(requests);
 
-      // 3) Construir mapa de alumnos únicos con datos completos
+      // --- 4) Mapear alumnos y sus datos de contacto ---
       const mapa = new Map();
-      results.forEach(({ lista }) => {
+      results.forEach(({ lista }) =>
         lista.forEach(r => {
           if (!mapa.has(r.alumno_id)) {
             const info = alumnosFull.find(a => a.id === r.alumno_id) || {};
-            mapa.set(r.alumno_id, { ...r, direccion: info.direccion, telefono: info.telefono });
+            mapa.set(r.alumno_id, {
+              alumno_id: r.alumno_id,
+              nombre:    r.nombre,
+              apellidos: r.apellidos,
+              direccion: info.direccion || '',
+              telefono:  info.telefono || ''
+            });
           }
-        });
-      });
+        })
+      );
 
-      // 4) Preparar datos para Excel
+      // --- 5) Preparar datos para Excel ---
       const excelData = Array.from(mapa.values()).map(item => {
         const rec = {
           'Nombre Completo': `${item.nombre} ${item.apellidos}`,
-          Dirección: item.direccion || '',
-          Teléfono: item.telefono || ''
+          'Dirección':       item.direccion,
+          'Teléfono':        item.telefono,
         };
         fechas.forEach(fecha => {
-          const reg = results.find(r => r.fecha === fecha).lista.find(r => r.alumno_id === item.alumno_id);
+          // buscamos el registro de esa fecha para este alumno
+          const reg = results
+            .find(r => r.fecha === fecha)
+            .lista.find(r => r.alumno_id === item.alumno_id);
           rec[fecha] = reg && reg.presente ? 'P' : 'A';
         });
         return rec;
       });
 
-      // 5) Generar y descargar Excel
+      // --- 6) Generar y descargar el archivo Excel ---
       const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.json_to_sheet(excelData, { header: ['Nombre Completo','Dirección','Teléfono', ...fechas] });
+      const headers = ['Nombre Completo', 'Dirección', 'Teléfono', ...fechas];
+      const ws = XLSX.utils.json_to_sheet(excelData, { header: headers });
       XLSX.utils.book_append_sheet(wb, ws, 'Asistencia');
       XLSX.writeFile(wb, `asistencia_${tallerId}_${mes}.xlsx`);
     } catch (e) {
