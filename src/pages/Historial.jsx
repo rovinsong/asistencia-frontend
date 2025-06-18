@@ -73,8 +73,9 @@ export default function Historial() {
 
       // 4) Filtrar allDates por esos días de la semana
       const dates = allDates.filter(fecha => {
-        const dayNum = new Date(fecha).getDay();
-        return allowedNums.includes(dayNum);
+      const [y, m, d] = fecha.split('-').map(Number);
+      const dayNum = new Date(y, m - 1, d).getDay();
+      return allowedNums.includes(dayNum);
       });
 
       // --- DEBUGGING OPCIONAL ---
