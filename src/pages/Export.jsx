@@ -77,26 +77,26 @@ export default function ExportAsistencia() {
         })
       );
 
-      // --- 5) Preparar datos para Excel ---
+      // 5) Preparar datos para Excel, usando solo el día (dos dígitos) como clave
+      const days = fechas.map(f => f.slice(-2));  // ["02","04","09",...]
       const excelData = Array.from(mapa.values()).map(item => {
         const rec = {
-          'Nombre Completo': `${item.nombre} ${item.apellidos}`,
+          'Nombre': `${item.nombre} ${item.apellidos}`,
           'Dirección':       item.direccion,
           'Teléfono':        item.telefono,
         };
-        fechas.forEach(fecha => {
-          // buscamos el registro de esa fecha para este alumno
-          const reg = results
-            .find(r => r.fecha === fecha)
-            .lista.find(r => r.alumno_id === item.alumno_id);
-          rec[fecha] = reg && reg.presente ? 'P' : 'A';
+        fechas.forEach((fecha, i) => {
+          const dayKey = days[i];
+          const reg = results.find(r => r.fecha === fecha)
+                            .lista.find(r => r.alumno_id === item.alumno_id);
+          rec[dayKey] = reg && reg.presente ? 'P' : 'A';
         });
         return rec;
       });
 
-      // --- 6) Generar y descargar el archivo Excel ---
+      // 6) Generar y descargar Excel con cabecera “Número de día”
       const wb = XLSX.utils.book_new();
-      const headers = ['Nombre Completo', 'Dirección', 'Teléfono', ...fechas];
+      const headers = ['Nombre Completo', 'Dirección', 'Teléfono', ...days];
       const ws = XLSX.utils.json_to_sheet(excelData, { header: headers });
       XLSX.utils.book_append_sheet(wb, ws, 'Asistencia');
       XLSX.writeFile(wb, `asistencia_${tallerId}_${mes}.xlsx`);
